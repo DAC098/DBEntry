@@ -1,4 +1,8 @@
-const util = require("util");
+try {
+    const util = require("util");
+} catch(e) {
+
+}
 
 /*
 
@@ -67,6 +71,8 @@ const DBEntry = function(construct_type,construct_data) {
         var_type: "",
         var_value: undefined,
         is_empty: true,
+        retriever: undefined,
+        init: false,
     }
 
     /*
@@ -81,6 +87,9 @@ const DBEntry = function(construct_type,construct_data) {
         switch (against_type) {
             case "array":
                 return Array.isArray(check);
+                break;
+            case "container":
+                return false;
                 break;
             default:
                 return typeof check === against_type;
@@ -109,6 +118,36 @@ const DBEntry = function(construct_type,construct_data) {
     // type is set to the key of the template being used
     var type = "";
 
+    const getContainer = (current_ref) => {
+        var rtn = {};
+        for(key in current_ref) {
+            if(current_ref[key].var_type === "container") {
+                rtn[key] = getContainer(current_ref[key].var_value);
+            } else {
+                rtn[key] = current_ref[key].var_value;
+            }
+        }
+        return rtn;
+    }
+
+    const getValue = (current_ref) => {
+        return current_ref;
+    }
+
+    const setValue = (current_ref,key_name,new_value) => {
+        if(valueCheck(current_ref.var_type,new_value) || (current_ref.var_type === "container" && !current_ref.init)) {
+            console.log("setting",key_name,"with",new_value,"\n");
+            current_ref.var_value = new_value;
+        } else {
+            if(current_ref.var_type === "container") {
+                console.log("containers cannot be overriden\n");
+            } else {
+                console.log("invalid type passed to",key_name,"requires",current_ref.var_type,"\n");
+            }
+        }
+        console.log("var_value:",current_ref.var_value,"\nvar_type:",current_ref.var_type,"\ninit:",current_ref.init,"\n");
+    }
+
     /*
     function getObjectValues
     creates a cloned object from value_obj and sets
@@ -121,6 +160,8 @@ const DBEntry = function(construct_type,construct_data) {
         // set the type of the cloned object by based on the type of value
         // given to it
         rtn.var_type = valueType(rtn.var_value);
+        // set getValue as the retriever for the key
+        rtn.retriever = getValue;
         // return the cloned object
         return rtn;
     }
@@ -148,28 +189,30 @@ const DBEntry = function(construct_type,construct_data) {
         var rtn = {};
         // begin cycling thru the current set of keys for the object given
         for(key in set_to_current) {
+            var original_key = key;
             // check if the key is an object by getting the number of keys it
             // might have, if object has any keys then its considered a
             // container
             if( (Object.keys(set_to_current[key])).length === 0 ) {
                 rtn[key] = getObjectValues(set_to_current[key]);
-                console.log("object created\n    key:",key,"\n    contents:",rtn[key],"\n");
+                console.log(key,"created\n");
             } else {
-                console.log("preparing for recursive call with key:",key,"\n");
+                console.log("preparing to create container",key,"\n");
                 // create the key as if its not a container
                 rtn[key] = Object.assign({},value_obj);
                 // specify the type explicitly
                 rtn[key].var_type = "container";
                 // can never be empty
                 rtn[key].is_empty = false;
-                console.log(key,":",rtn[key],"\n");
+                // specify getContainer as the retriever for the container
+                rtn[key].retriever = getContainer;
                 // set the value of the container equal to the keys of the
                 // container
                 rtn[key].var_value = setCurrent(set_to_current[key]);
-                console.log("object created from recursive call\n    key:",key,"\n    contents:",rtn[key],"\n");
+                console.log(original_key,"container created\n");
             }
         }
-        console.log("returning from setCurrent:",rtn,"\n");
+        console.log("returning results setCurrent\n");
         return rtn;
     }
 
@@ -189,31 +232,36 @@ const DBEntry = function(construct_type,construct_data) {
             accessed
     */
     const createSelfRef = (key_name,self_ref,current_ref) => {
-        /*
+
         console.log("creating self reference");
         console.log("    key:",key_name);
         console.log("    self_ref:",self_ref);
         console.log("    current_ref:",current_ref,"\n");
-        */
+
         // create keys for the current reference position of the class and set
         // to the appropriate reference position of current
         Object.defineProperty(self_ref,key_name,{
             get: () => {
-                return current_ref[key_name].var_value;
+                return  current_ref[key_name].retriever(current_ref[key_name].var_value); //current_ref[key_name].var_value;
             },
             set: (new_value) => {
+                console.log("\ncalling settter for",key_name);
                 // the the key being called is a container then deny setter
+                /*
                 if(current_ref[key_name].var_type === "container") {
-                    console.log("cannot set a new value to a container\nset failed");
+                    console.log("cannot set a new value to a container\nset failed\n");
                 } else {
                     // check to make sure that the value being based to setter
                     // is the proper type
                     if(valueCheck(current_ref[key_name].var_type,new_value)) {
+                        console.log("setting",new_value,"to",key_name,"\n");
                         current_ref[key_name].var_value = new_value;
                     } else {
-                        console.log("invalid type passed to",key_name,"requires",current_ref[key_name].var_type);
+                        console.log("invalid type passed to",key_name,"requires",current_ref[key_name].var_type,"\n");
                     }
                 }
+                */
+                setValue(current_ref[key_name],key_name,new_value);
             }
         });
     }
@@ -229,16 +277,20 @@ const DBEntry = function(construct_type,construct_data) {
     const createRetrievableObject = (self_ref,current_ref) => {
         //console.log("setting reference to DBEntry\n    self_ref:",self_ref,"\n    current_ref:",current_ref,"\n");
         for(key in current_ref) {
+            var original_key = key;
             console.log("key:",key,"\ncontents:",current_ref[key],"\n");
             if( current_ref[key].var_type === "container" ) {
-                console.log("key is container\n");
+                console.log(key,"is container\ncreating reference for container\n");
                 createSelfRef(key,self_ref,current_ref);
-                console.log("after creating reference:",self_ref[key],"\n");
-                createRetrievableObject(self_ref[key],current_ref[key].var_value);
+                console.log("creating reference for container contents",original_key);
+                createRetrievableObject(self_ref[original_key],current_ref[original_key].var_value);
                 console.log("container contents set\n");
             } else {
+                console.log("creating reference for key",key);
                 createSelfRef(key,self_ref,current_ref);
             }
+            current_ref[original_key].init = true;
+            console.log("key:",key,"\noriginal_key:",original_key,"\n");
         }
     }
 
@@ -254,7 +306,6 @@ const DBEntry = function(construct_type,construct_data) {
             console.log("setting current\n");
             console.log("------------------------------\n");
             current = retrieveTemplate(tmplt_type);
-            this.logCurrent();
             set = true;
             type = tmplt_type;
             console.log("------------------------------\n");
@@ -376,7 +427,11 @@ const DBEntry = function(construct_type,construct_data) {
 
     // temporary, just to see the full contents of current
     this.logCurrent = () => {
-        console.log("logging current:\n",util.inspect(current,false,null));
+        try {
+            console.log("logging current:\n",util.inspect(current,false,null));
+        } catch(e) {
+            console.log("loggin current:\n",current);
+        }
     }
 
     const checkCurrent = (exclude_object,current_ref) => {
@@ -406,4 +461,8 @@ const DBEntry = function(construct_type,construct_data) {
     if(typeof construct_data !== "undefined") { this.setEntry(construct_data); }
 }
 
-module.exports = DBEntry;
+try {
+    module.exports = DBEntry;
+} catch(e) {
+
+}

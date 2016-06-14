@@ -1,4 +1,5 @@
 const DBEntry = require("./DBEntry.js");
+const util = require("util");
 
 var failed = false;
 
@@ -20,6 +21,7 @@ try {
     console.log("username:",entry_one.username);
     console.log("admin:",entry_one.admin);
     console.log("name:",entry_one.name);
+    console.log("name object:",util.inspect(entry_one.name));
     console.log("name.first:",entry_one.name.first);
     console.log("name.last:",entry_one.name.last);
     console.log("email:",entry_one.email);
@@ -54,6 +56,8 @@ try {
     console.log(e.stack);
     failed = true;
 }
+
+console.log("entry_one:",util.inspect(entry_one));
 
 try {
     console.log("\ngetting entry_one keys----------------------------\n");
