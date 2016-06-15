@@ -99,6 +99,22 @@ console.log( (failed) ? "\ntest failed" : "\ntest complete");
 console.log("\n----------------------------\n");
 
 failed = false;
+
+console.log("\n----------------------------");
+console.log("\nBig test");
+console.log("\n----------------------------");
+
+var big = new DBEntry("true_test");
+
+//big.logCurrent();
+
+console.log("adding to array");
+try {
+    big.user.ref.push("thing");
+} catch (e) {
+    console.log("error:",e.message);
+}
+console.log("array:",big.user.ref);
 /*
 console.log("\n----------------------------");
 console.log("\nstarting test 2");

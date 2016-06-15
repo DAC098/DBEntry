@@ -1,52 +1,11 @@
+var util = undefined;
+
 try {
-    const util = require("util");
+    util = require("util");
+    console.log("node env");
 } catch(e) {
-
+    console.log("browser env");
 }
-
-/*
-
-example of current once set:
-
-{
-    pk: {
-        var_value: "95",
-        var_type: string,
-        is_empty: false
-    },
-    username: {
-        var_value: "",
-        var_type: string,
-        is_empty: true,
-    },
-    name: {
-        var_type: object,
-        is_empty: false,
-        var_value: {
-            first: {
-                var_value: "bob",
-                var_type: string,
-                is_empty: false,
-            },
-            last: {
-                var_value: "stevenson",
-                var_type: string,
-                is_empty: false,
-            }
-        }
-    },
-    email: {
-        var_value: "bob@dac.com",
-        var_type: string,
-        is_empty: false
-    },
-    admin: {
-        var_value: false,
-        var_type: boolean,
-        is_empty: false,
-    }
-}
-*/
 
 const DBEntry = function(construct_type,construct_data) {
 
@@ -61,6 +20,9 @@ const DBEntry = function(construct_type,construct_data) {
         },
         post: {
             pk: Number,title: String,body: String,created: String,username: String
+        },
+        true_test: {
+            name: "",number: 0,bool: false,user: {name: {first: "",last: ""}, password: "",admin: false, ref: [],other: {}}
         }
     };
 
@@ -118,25 +80,13 @@ const DBEntry = function(construct_type,construct_data) {
     // type is set to the key of the template being used
     var type = "";
 
-    const getContainer = (current_ref) => {
-        var rtn = {};
-        for(key in current_ref) {
-            if(current_ref[key].var_type === "container") {
-                rtn[key] = getContainer(current_ref[key].var_value);
-            } else {
-                rtn[key] = current_ref[key].var_value;
-            }
-        }
-        return rtn;
-    }
-
     const getValue = (current_ref) => {
         return current_ref;
     }
 
     const setValue = (current_ref,key_name,new_value) => {
         if(valueCheck(current_ref.var_type,new_value) || (current_ref.var_type === "container" && !current_ref.init)) {
-            console.log("setting",key_name,"with",new_value,"\n");
+            //console.log("setting",key_name,"with",new_value,"\n");
             current_ref.var_value = new_value;
         } else {
             if(current_ref.var_type === "container") {
@@ -145,7 +95,7 @@ const DBEntry = function(construct_type,construct_data) {
                 console.log("invalid type passed to",key_name,"requires",current_ref.var_type,"\n");
             }
         }
-        console.log("var_value:",current_ref.var_value,"\nvar_type:",current_ref.var_type,"\ninit:",current_ref.init,"\n");
+        //console.log("var_value:",current_ref.var_value,"\nvar_type:",current_ref.var_type,"\ninit:",current_ref.init,"\n");
     }
 
     /*
@@ -204,8 +154,6 @@ const DBEntry = function(construct_type,construct_data) {
                 rtn[key].var_type = "container";
                 // can never be empty
                 rtn[key].is_empty = false;
-                // specify getContainer as the retriever for the container
-                rtn[key].retriever = getContainer;
                 // set the value of the container equal to the keys of the
                 // container
                 rtn[key].var_value = setCurrent(set_to_current[key]);
@@ -231,38 +179,44 @@ const DBEntry = function(construct_type,construct_data) {
     @params: current_ref [object], the reference position for current to be
             accessed
     */
-    const createSelfRef = (key_name,self_ref,current_ref) => {
+    const createSelfValue = (key_name,self_ref,current_ref) => {
 
-        console.log("creating self reference");
+        console.log("\n----------\ncreating self reference");
         console.log("    key:",key_name);
-        console.log("    self_ref:",self_ref);
-        console.log("    current_ref:",current_ref,"\n");
+        console.log("    self_ref:",self_ref,"\n");
 
         // create keys for the current reference position of the class and set
         // to the appropriate reference position of current
         Object.defineProperty(self_ref,key_name,{
             get: () => {
-                return  current_ref[key_name].retriever(current_ref[key_name].var_value); //current_ref[key_name].var_value;
+                return  getValue(current_ref[key_name].var_value);
             },
             set: (new_value) => {
-                console.log("\ncalling settter for",key_name);
-                // the the key being called is a container then deny setter
-                /*
-                if(current_ref[key_name].var_type === "container") {
-                    console.log("cannot set a new value to a container\nset failed\n");
-                } else {
-                    // check to make sure that the value being based to setter
-                    // is the proper type
-                    if(valueCheck(current_ref[key_name].var_type,new_value)) {
-                        console.log("setting",new_value,"to",key_name,"\n");
-                        current_ref[key_name].var_value = new_value;
-                    } else {
-                        console.log("invalid type passed to",key_name,"requires",current_ref[key_name].var_type,"\n");
-                    }
-                }
-                */
+                //console.log("\ncalling settter for",key_name);
                 setValue(current_ref[key_name],key_name,new_value);
-            }
+            },
+            enumerable: true,
+        });
+
+        console.log("object property created");
+        console.log("    self_ref:",self_ref,"\n----------\n");
+    }
+
+    const createSelfContainer = (key_name,self_ref,current_ref) => {
+
+        Object.defineProperty(self_ref,key_name,{
+            //value: getContainer(current_ref[key_name].var_value),
+            value: {},
+            writable: true,
+            enumerable: true,
+            configurable: true
+        });
+    }
+
+    const restrictSelfContainer = (key_name,self_ref,current_ref) => {
+        Object.defineProperty(self_ref,key_name,{
+            writable: false,
+            configurable: false,
         });
     }
 
@@ -278,19 +232,21 @@ const DBEntry = function(construct_type,construct_data) {
         //console.log("setting reference to DBEntry\n    self_ref:",self_ref,"\n    current_ref:",current_ref,"\n");
         for(key in current_ref) {
             var original_key = key;
-            console.log("key:",key,"\ncontents:",current_ref[key],"\n");
+            //console.log("key:",key,"\ncontents:",current_ref[key],"\n");
             if( current_ref[key].var_type === "container" ) {
-                console.log(key,"is container\ncreating reference for container\n");
-                createSelfRef(key,self_ref,current_ref);
-                console.log("creating reference for container contents",original_key);
+                console.log(key,"is container, creating reference for container\n");
+                createSelfContainer(key,self_ref,current_ref);
+                console.log("creating content reference for container:",original_key,"\n");
                 createRetrievableObject(self_ref[original_key],current_ref[original_key].var_value);
-                console.log("container contents set\n");
+                console.log("contents set for container:",original_key,"\n");
+                console.log("restricting container:",original_key,"\n");
+                restrictSelfContainer(original_key,self_ref);
             } else {
                 console.log("creating reference for key",key);
-                createSelfRef(key,self_ref,current_ref);
+                createSelfValue(key,self_ref,current_ref);
             }
             current_ref[original_key].init = true;
-            console.log("key:",key,"\noriginal_key:",original_key,"\n");
+            //console.log("key:",key,"\noriginal_key:",original_key,"\n");
         }
     }
 
@@ -302,20 +258,16 @@ const DBEntry = function(construct_type,construct_data) {
     */
     this.initEntry = (tmplt_type) => {
         if(tmplt_type in template) {
-            console.log("------------------------------\n");
-            console.log("setting current\n");
-            console.log("------------------------------\n");
+            console.log("------------------------------\nsetting current\n------------------------------\n");
             current = retrieveTemplate(tmplt_type);
             set = true;
             type = tmplt_type;
-            console.log("------------------------------\n");
-            console.log("connecting current to self\n");
-            console.log("------------------------------\n");
+            console.log("------------------------------\nconnecting current to class\n------------------------------\n");
             createRetrievableObject(self,current);
-            console.log("init complete\n");
+            console.log("------------------------------\ninit complete\n------------------------------\n");
         } else {
             console.log("invalid template type, entry is not set");
-            console.log("init failed");
+            console.log("------------------------------\ninit failed\n------------------------------\n");
         }
     }
 
@@ -455,6 +407,14 @@ const DBEntry = function(construct_type,construct_data) {
     this.checkForEmpty = (exclude_object) => {
         exclude_object = (exclude_object) ? exclude_object : {};
         return checkCurrent(exclude_object,current);
+    }
+
+    for(func_key in this) {
+        Object.defineProperty(this,func_key,{
+            enumerable: false,
+            configurable: false,
+            writable: false,
+        });
     }
 
     if(typeof construct_type !== "undefined") { this.initEntry(construct_type); }
