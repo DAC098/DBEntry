@@ -1,4 +1,4 @@
-const DBEntry = require("./DBEntry.js");
+const DBClass = require("./index.js");
 const util = require("util");
 
 var failed = false;
@@ -7,8 +7,26 @@ console.log("\n----------------------------");
 console.log("\nstarting test 1");
 console.log("\n----------------------------\n");
 
+const AppTemplates = new DBClass();
+AppTemplates.createTmplt("user",{pk: "",username: "",name: {first: "",last: ""},email: "",admin: false});
+AppTemplates.createTmplt("true_test",{
+    name: "",
+    number: 0,
+    bool: false,
+    user: {
+        name: {
+            first: "",
+            last: ""
+        },
+        password: "",
+        admin: false,
+        ref: [],
+        other: {}
+    }
+});
+
 try {
-    var entry_one = new DBEntry("user");
+    var entry_one = AppTemplates.createEntry("user");
 } catch(e) {
     console.log(e.stack);
     failed = true;
@@ -77,6 +95,14 @@ try {
 try {
     console.log("\ngetting entry_one data----------------------------\n");
     console.log("entry_one:\n",entry_one.getEntry());
+    var exclude_obj_one = {pk: true,name:true};
+    var exclude_obj_two = {pk: true,name:{first:true}};
+    console.log("\nexlcude one:",entry_one.getEntry("exclude",exclude_obj_one));
+    console.log("\nexclude two:",entry_one.getEntry("exclude",exclude_obj_two));
+    var include_obj_one = {username: true,name:true,email:true};
+    var include_obj_two = {username: true,name:{first:true}};
+    console.log("\ninclude one:",entry_one.getEntry("include",include_obj_one));
+    console.log("\ninclude two:",entry_one.getEntry("include",include_obj_two));
 } catch (e) {
     console.log(e.stack);
     failed = true;
@@ -86,9 +112,27 @@ console.log();
 entry_one.logCurrent();
 
 try {
-    console.log("\nclearing entry----------------------------\n",entry_one.clearEntry());
+    console.log("\nemptying entry----------------------------\n",entry_one.emptyEntry());
     console.log();
     entry_one.logCurrent();
+} catch (e) {
+    console.log(e.stack);
+    failed = true;
+}
+
+try {
+    console.log("\nseting entry----------------------------\n");
+    entry_one.setEntry({
+        pk: "98",
+        username: "",
+        name: {
+            first: "david",
+            last: "cathers",
+        },
+        email: "me@dac.com",
+        admin: true
+    });
+    console.log("entry_one:",entry_one.getEntry());
 } catch (e) {
     console.log(e.stack);
     failed = true;
@@ -104,104 +148,99 @@ console.log("\n----------------------------");
 console.log("\nBig test");
 console.log("\n----------------------------");
 
-var big = new DBEntry("true_test");
+var big = AppTemplates.createEntry("true_test");
 
-//big.logCurrent();
+big.logCurrent();
 
-console.log("adding to array");
-try {
-    big.user.ref.push("thing");
-} catch (e) {
-    console.log("error:",e.message);
+var set_data = {
+    name: "phil",
+    number: 76,
+    bool: true,
+    user: {
+        password: "",
+        ref: ["dude","jog"],
+        other: {
+            thing: 0,
+            stuff: "dude",
+            what: "where"
+        }
+    }
 }
-console.log("array:",big.user.ref);
-/*
-console.log("\n----------------------------");
-console.log("\nstarting test 2");
-console.log("\n----------------------------\n");
 
 try {
-    var thing = new DBEntry("test");
+    console.log("\nseting entry----------------------------\n");
+    big.setEntry({
+        name: "phil",
+        number: 76,
+        bool: true,
+        user: {
+            password: "",
+            ref: ["dude","jog"],
+            other: {
+                thing: 0,
+                stuff: "dude",
+                what: "where"
+            }
+        }
+    });
+    console.log("big:",big.getEntry());
 } catch(e) {
     console.log(e.stack);
-    failed = true;
 }
 
 try {
-    console.log("thing.number",thing.number,"\n");
-    console.log("thing.name",thing.name,"\n");
-    console.log("thing.cool",thing.cool,"\n");
+    console.log("\ndeleting entry data from object----------------------------\n");
+    delete big.user;
+    console.log("big.user:",big.user);
+    console.log("removing non-controlled data from entry object");
+    delete big.user.other.thing;
+    console.log("big.user.other:",big.user.other);
+} catch (e) {
+    console.log(e.stack);
+}
+
+try {
+    console.log("\ngetting big data----------------------------\n");
+    console.log("include one:",big.getEntry("include",{
+        name: true,
+        user: {
+            name: true,
+        }
+    }));
+    console.log("include two:",big.getEntry("include",{
+        name: true,
+        user: true
+    }));
+
+} catch (e) {
+    console.log(e.stack);
+}
+
+big.emptyEntry();
+
+big.logCurrent();
+
+try {
+    console.log("\nchecking for empty values----------------------------\n");
+    var check = big.checkForEmpty();
+    console.log("global check:",check.result,"\n");
+    console.log("global found:",check.found,"\n");
+    var required_values_one = {
+        name: true,
+        user: {
+            name: true,
+        },
+    };
+    var required_values_two = {
+        name: true,
+        user: true,
+    }
+    check = big.checkForEmpty(required_values_one);
+    console.log("required values one check:",check.result,"\n");
+    console.log("required values one found:",check.found,"\n");
+    check = big.checkForEmpty(required_values_two);
+    console.log("required values two check:",check.result,"\n");
+    console.log("required values two found:",check.found,"\n");
 } catch(e) {
     console.log(e.stack);
-    failed = true;
 }
-
-try {
-    console.log("getting objects for thing\n");
-    console.log("typeof number",typeof thing.number,"\n");
-    console.log("typeof name",typeof thing.name,"\n");
-    console.log("typeof cool",typeof thing.cool,"\n");
-} catch (e) {
-    console.log(e.stack);
-    failed = true;
-}
-
-try {
-    console.log("settting objects for thing\n");
-    thing.number = 84;
-    console.log("thing.number",thing.number,"\n");
-    thing.name = "dude";
-    console.log("thing.name",thing.name,"\n");
-    thing.cool = true;
-    console.log("thing.cool",thing.cool,"\n");
-} catch (e) {
-    console.log(e.stack);
-    failed = true;
-}
-
-try {
-    console.log("getting objects for thing\n");
-    console.log("typeof number",typeof thing.number,"\n");
-    console.log("typeof name",typeof thing.name,"\n");
-    console.log("typeof cool",typeof thing.cool,"\n");
-} catch (e) {
-    console.log(e.stack);
-    failed = true;
-}
-
-console.log("\n----------------------------");
-console.log( (failed) ? "\ntest failed" : "\ntest complete");
-console.log("\n----------------------------\n");
-
-console.log("secondary test\n");
-
-var obj = {};
-
-var thing = {
-    other: {
-        test: 2
-    },
-    dude: false
-}
-
-Object.defineProperty(obj,"key",{
-    get: () => {
-        return thing
-    },
-    set: (value) => {
-        thing = thing
-    }
-});
-
-Object.defineProperty(obj.key,"storage",{
-    get: () => {
-        return thing.other;
-    },
-    set: () => {
-        thing.other = thing.other;
-    }
-});
-
-console.log("obj.key:",obj.key,"\n");
-console.log("obj.key.storage:",obj.key.storage,"\n");
-*/

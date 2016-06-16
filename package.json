@@ -2,7 +2,7 @@
   "name": "dbentry",
   "version": "1.0.0",
   "description": "A database template class",
-  "main": "DBEntry.js",
+  "main": "index.js",
   "scripts": {
     "test": "node test.js"
   },
