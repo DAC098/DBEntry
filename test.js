@@ -1,4 +1,4 @@
-const DBClass = require("./index.js");
+const DBPrep = require("./index.js");
 const util = require("util");
 
 var failed = false;
@@ -7,7 +7,7 @@ console.log("\n----------------------------");
 console.log("\nstarting test 1");
 console.log("\n----------------------------\n");
 
-const AppTemplates = new DBClass();
+const AppTemplates = new DBPrep();
 AppTemplates.createTmplt("user",{pk: "",username: "",name: {first: "",last: ""},email: "",admin: false});
 AppTemplates.createTmplt("true_test",{
     name: "",
@@ -97,12 +97,12 @@ try {
     console.log("entry_one:\n",entry_one.getEntry());
     var exclude_obj_one = {pk: true,name:true};
     var exclude_obj_two = {pk: true,name:{first:true}};
-    console.log("\nexlcude one:",entry_one.getEntry("exclude",exclude_obj_one));
-    console.log("\nexclude two:",entry_one.getEntry("exclude",exclude_obj_two));
+    console.log("\nexlcude one:\n",entry_one.getEntry("exclude",exclude_obj_one));
+    console.log("\nexclude two:\n",entry_one.getEntry("exclude",exclude_obj_two));
     var include_obj_one = {username: true,name:true,email:true};
     var include_obj_two = {username: true,name:{first:true}};
-    console.log("\ninclude one:",entry_one.getEntry("include",include_obj_one));
-    console.log("\ninclude two:",entry_one.getEntry("include",include_obj_two));
+    console.log("\ninclude one:\n",entry_one.getEntry("include",include_obj_one));
+    console.log("\ninclude two:\n",entry_one.getEntry("include",include_obj_two));
 } catch (e) {
     console.log(e.stack);
     failed = true;
@@ -132,7 +132,7 @@ try {
         email: "me@dac.com",
         admin: true
     });
-    console.log("entry_one:",entry_one.getEntry());
+    console.log("entry_one:\n",entry_one.getEntry());
 } catch (e) {
     console.log(e.stack);
     failed = true;
@@ -201,16 +201,28 @@ try {
 
 try {
     console.log("\ngetting big data----------------------------\n");
-    console.log("include one:",big.getEntry("include",{
+    console.log("include one:\n",big.getEntry("include",{
         name: true,
         user: {
             name: true,
         }
-    }));
-    console.log("include two:",big.getEntry("include",{
+    }),"\n");
+    console.log("include two:\n",big.getEntry("include",{
         name: true,
         user: true
-    }));
+    }),"\n");
+    console.log("exclude one:\n",big.getEntry("exclude",{
+        name: true,
+        user: true,
+    }),"\n");
+    console.log("exclude two:\n",big.getEntry("exclude",{
+        number: true,
+        user: {
+            password: true,
+            admin: true,
+            other: true,
+        }
+    }),"\n");
 
 } catch (e) {
     console.log(e.stack);
@@ -218,13 +230,13 @@ try {
 
 big.emptyEntry();
 
-big.logCurrent();
+//big.logCurrent();
 
 try {
     console.log("\nchecking for empty values----------------------------\n");
     var check = big.checkForEmpty();
     console.log("global check:",check.result,"\n");
-    console.log("global found:",check.found,"\n");
+    console.log("global found:\n",check.found,"\n");
     var required_values_one = {
         name: true,
         user: {
@@ -237,10 +249,10 @@ try {
     }
     check = big.checkForEmpty(required_values_one);
     console.log("required values one check:",check.result,"\n");
-    console.log("required values one found:",check.found,"\n");
+    console.log("required values one found:\n",check.found,"\n");
     check = big.checkForEmpty(required_values_two);
     console.log("required values two check:",check.result,"\n");
-    console.log("required values two found:",check.found,"\n");
+    console.log("required values two found:\n",check.found,"\n");
 } catch(e) {
     console.log(e.stack);
 }

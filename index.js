@@ -1,3 +1,3 @@
-var DBClass = require("./lib/DBClass.js");
+const DBPrep = require("./lib/DBPrep.js");
 
-module.exports = DBClass;
+module.exports = DBPrep;
